@@ -22,26 +22,47 @@ public class MySqlProductDao extends MySqlDaoBase implements ProductDao
     public List<Product> search(Integer categoryId, BigDecimal minPrice, BigDecimal maxPrice, String color)
     {
         List<Product> products = new ArrayList<>();
+        StringBuilder sqlBuilder = new StringBuilder("SELECT * FROM products WHERE 1=1");
+        List<Object> params = new ArrayList<>();
 
-        String sql = "SELECT * FROM products " +
-                "WHERE (category_id = ? OR ? = -1) " +
-                "   AND (price <= ? OR ? = -1) " +
-                "   AND (color = ? OR ? = '') ";
+        if (categoryId != null && categoryId != -1) {
+            sqlBuilder.append(" AND category_id = ?");
+            params.add(categoryId);
+        }
 
-        categoryId = categoryId == null ? -1 : categoryId;
-        minPrice = minPrice == null ? new BigDecimal("-1") : minPrice;
-        maxPrice = maxPrice == null ? new BigDecimal("-1") : maxPrice;
-        color = color == null ? "" : color;
+        if (minPrice != null && minPrice.compareTo(BigDecimal.valueOf(-1)) != 0) {
+            sqlBuilder.append(" AND price >= ?");
+            params.add(minPrice);
+        }
+
+        if (maxPrice != null && maxPrice.compareTo(BigDecimal.valueOf(-1)) != 0) {
+            sqlBuilder.append(" AND price <= ?");
+            params.add(maxPrice);
+        }
+
+        if (color != null && !color.isBlank()) {
+            sqlBuilder.append(" AND color LIKE ?");
+            params.add("%" + color + "%");
+        }
+
+
+        sqlBuilder.append(" ORDER BY product_id ASC");
+
 
         try (Connection connection = getConnection())
         {
-            PreparedStatement statement = connection.prepareStatement(sql);
-            statement.setInt(1, categoryId);
-            statement.setInt(2, categoryId);
-            statement.setBigDecimal(3, minPrice);
-            statement.setBigDecimal(4, minPrice);
-            statement.setString(5, color);
-            statement.setString(6, color);
+
+            PreparedStatement statement = connection.prepareStatement(sqlBuilder.toString());
+            for (int i = 0; i < params.size(); i++) {
+                Object param = params.get(i);
+                if (param instanceof Integer) {
+                    statement.setInt(i + 1, (Integer) param);
+                } else if (param instanceof BigDecimal) {
+                    statement.setBigDecimal(i + 1, (BigDecimal) param);
+                } else if (param instanceof String) {
+                    statement.setString(i + 1, (String) param);
+                }
+            }
 
             ResultSet row = statement.executeQuery();
 
@@ -53,7 +74,7 @@ public class MySqlProductDao extends MySqlDaoBase implements ProductDao
         }
         catch (SQLException e)
         {
-            throw new RuntimeException(e);
+            throw new RuntimeException("Error during product search", e);
         }
 
         return products;
@@ -65,7 +86,7 @@ public class MySqlProductDao extends MySqlDaoBase implements ProductDao
         List<Product> products = new ArrayList<>();
 
         String sql = "SELECT * FROM products " +
-                    " WHERE category_id = ? ";
+                " WHERE category_id = ? ";
 
         try (Connection connection = getConnection())
         {
@@ -134,21 +155,19 @@ public class MySqlProductDao extends MySqlDaoBase implements ProductDao
             int rowsAffected = statement.executeUpdate();
 
             if (rowsAffected > 0) {
-                // Retrieve the generated keys
-                ResultSet generatedKeys = statement.getGeneratedKeys();
 
-                if (generatedKeys.next()) {
-                    // Retrieve the auto-incremented ID
-                    int orderId = generatedKeys.getInt(1);
+                try (ResultSet generatedKeys = statement.getGeneratedKeys()) {
+                    if (generatedKeys.next()) {
+                        int newProductId = generatedKeys.getInt(1);
 
-                    // get the newly inserted category
-                    return getById(orderId);
+                        return getById(newProductId);
+                    }
                 }
             }
         }
         catch (SQLException e)
         {
-            throw new RuntimeException(e);
+            throw new RuntimeException("Error creating product: " + product.getName(), e);
         }
         return null;
     }
@@ -156,6 +175,7 @@ public class MySqlProductDao extends MySqlDaoBase implements ProductDao
     @Override
     public void update(int productId, Product product)
     {
+
         String sql = "UPDATE products" +
                 " SET name = ? " +
                 "   , price = ? " +
@@ -184,7 +204,7 @@ public class MySqlProductDao extends MySqlDaoBase implements ProductDao
         }
         catch (SQLException e)
         {
-            throw new RuntimeException(e);
+            throw new RuntimeException("Error updating product with ID: " + productId, e);
         }
     }
 
@@ -192,11 +212,18 @@ public class MySqlProductDao extends MySqlDaoBase implements ProductDao
     public void delete(int productId)
     {
 
-        String sql = "DELETE FROM products " +
-                " WHERE product_id = ?;";
+        String sql = "DELETE FROM products WHERE product_id = ?;";
 
         try (Connection connection = getConnection())
         {
+
+            String deleteShoppingCartSql = "DELETE FROM shopping_cart WHERE product_id = ?";
+            try (PreparedStatement deleteCartStatement = connection.prepareStatement(deleteShoppingCartSql)) {
+                deleteCartStatement.setInt(1, productId);
+                deleteCartStatement.executeUpdate();
+            }
+
+
             PreparedStatement statement = connection.prepareStatement(sql);
             statement.setInt(1, productId);
 
@@ -204,7 +231,7 @@ public class MySqlProductDao extends MySqlDaoBase implements ProductDao
         }
         catch (SQLException e)
         {
-            throw new RuntimeException(e);
+            throw new RuntimeException("Error deleting product with ID: " + productId, e);
         }
     }
 
