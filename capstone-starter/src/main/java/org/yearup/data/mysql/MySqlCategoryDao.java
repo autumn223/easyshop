@@ -111,16 +111,32 @@ public class MySqlCategoryDao extends MySqlDaoBase implements CategoryDao
     @Override
     public void delete(int categoryId)
     {
-        String sql = "DELETE FROM categories WHERE category_id = ?";
-        try (Connection connection = getConnection();
-             PreparedStatement statement = connection.prepareStatement(sql))
+        try (Connection connection = getConnection())
         {
-            statement.setInt(1, categoryId);
-            statement.executeUpdate();
+            // --- NEW: Delete from shopping_cart first ---
+            String deleteShoppingCartItemsSql = "DELETE FROM shopping_cart WHERE product_id IN (SELECT product_id FROM products WHERE category_id = ?)";
+            try (PreparedStatement deleteShoppingCartItemsStatement = connection.prepareStatement(deleteShoppingCartItemsSql)) {
+                deleteShoppingCartItemsStatement.setInt(1, categoryId);
+                deleteShoppingCartItemsStatement.executeUpdate();
+            }
+
+            // Then, delete all products that belong to this category
+            String deleteProductsSql = "DELETE FROM products WHERE category_id = ?";
+            try (PreparedStatement deleteProductsStatement = connection.prepareStatement(deleteProductsSql)) {
+                deleteProductsStatement.setInt(1, categoryId);
+                deleteProductsStatement.executeUpdate();
+            }
+
+            // Finally, delete the category itself
+            String deleteCategorySql = "DELETE FROM categories WHERE category_id = ?";
+            try (PreparedStatement deleteCategoryStatement = connection.prepareStatement(deleteCategorySql)) {
+                deleteCategoryStatement.setInt(1, categoryId);
+                deleteCategoryStatement.executeUpdate();
+            }
         }
         catch (SQLException e)
         {
-            throw new RuntimeException(e);
+            throw new RuntimeException("Error deleting category with ID: " + categoryId + " and its associated data.", e);
         }
     }
 
@@ -139,5 +155,4 @@ public class MySqlCategoryDao extends MySqlDaoBase implements CategoryDao
 
         return category;
     }
-
 }
