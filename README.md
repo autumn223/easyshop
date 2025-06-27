@@ -130,7 +130,7 @@ public class MySqlProductDao extends MySqlDaoBase implements ProductDao
     // ... other methods (listByCategoryId, getById, create, update, delete, mapRow)
 }
 
-
+Screenshots:
 
 ![es](https://github.com/user-attachments/assets/698159df-f13e-41b7-9140-909d6658118b)
 ![es2](https://github.com/user-attachments/assets/bf5cf423-32ba-4330-93c9-58f4ddea8484)
