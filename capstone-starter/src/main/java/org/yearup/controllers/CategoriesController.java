@@ -24,9 +24,9 @@ import java.util.List;
 
 
 import java.util.List;
-// add the annotations to make this a REST controller
+
 @RestController
-// add the annotation to make this controller the endpoint for the following url
+
 // http://localhost:8080/categories
 @RequestMapping("/categories")
 // add annotation to allow cross site origin requests
@@ -38,7 +38,7 @@ public class CategoriesController
 
 
     // create an Autowired controller to inject the categoryDao and ProductDao
-    @Autowired // This annotation is generally optional for constructor injection in Spring Boot 2.x+ but can be explicit.
+    @Autowired 
     public CategoriesController(CategoryDao categoryDao, ProductDao productDao)
     {
         this.categoryDao = categoryDao;
@@ -53,7 +53,7 @@ public class CategoriesController
         try {
             return categoryDao.getAllCategories();
         } catch (Exception e) {
-            // Log the error and return a 500 Internal Server Error
+            
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Error retrieving all categories", e);
         }
     }
@@ -71,14 +71,14 @@ public class CategoriesController
         return category;
     }
 
-    // the url to return all products in category 1 would look like this
-    // https://localhost:8080/categories/1/products
+
+
     @GetMapping("{categoryId}/products") // Maps to GET http://localhost:8080/categories/{categoryId}/products
     public List<Product> getProductsById(@PathVariable int categoryId)
     {
         // get a list of product by categoryId
         try {
-            // This calls the listByCategoryId method from the ProductDao
+            
             return productDao.listByCategoryId(categoryId);
         } catch (Exception e) {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Error retrieving products for category ID: " + categoryId, e);
@@ -109,12 +109,12 @@ public class CategoriesController
     public void updateCategory(@PathVariable int id, @RequestBody Category category)
     {
         // update the category by id
-        // First, check if the category exists to provide a proper 404 response
+        
         if (categoryDao.getById(id) == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Category not found with ID: " + id);
         }
         // Ensure the ID from the path variable is passed to the DAO for the update operation
-        // This prevents updates on the wrong entity if the categoryId in the request body is different/missing
+        
         category.setCategoryId(id);
         try {
             categoryDao.update(id, category);
@@ -124,7 +124,7 @@ public class CategoriesController
     }
 
 
-    // add annotation to call this method for a DELETE action - the url path must include the categoryId
+   
     @DeleteMapping("{id}") // Maps to DELETE http://localhost:8080/categories/{id}
     // add annotation to ensure that only an ADMIN can call this function
     @PreAuthorize("hasRole('ADMIN')") // Only users with the 'ADMIN' role can access this method
@@ -139,8 +139,8 @@ public class CategoriesController
         try {
             categoryDao.delete(id);
         } catch (Exception e) {
-            // Consider more specific error handling here, e.g., if there are products associated with this category,
-            // a foreign key constraint might prevent deletion.
+            
+            
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Error deleting category with ID: " + id + ". Check for dependent products.", e);
         }
     }
