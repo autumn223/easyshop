@@ -1,5 +1,7 @@
 EasyShop E-Commerce API - Capstone Project
-Project Description
+
+
+Project Description:
 This project is the backend API for an e-commerce application named EasyShop. It's built using Spring Boot and interacts with a MySQL database. The API provides essential functionalities for an online store, including:
 
 User Authentication & Authorization: Secure user login and registration using JWT (JSON Web Tokens) with distinct ROLE_USER and ROLE_ADMIN roles.
